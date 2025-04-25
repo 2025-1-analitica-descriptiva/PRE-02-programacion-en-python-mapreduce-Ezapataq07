@@ -21,8 +21,12 @@ from itertools import groupby
 def copy_raw_files_to_input_folder(n):
     """Funcion copy_files"""
 
-    if not os.path.exists("files/input"):
-        os.makedirs("files/input")
+
+    if os.path.exists("files/input"):
+        for file in glob.glob("files/input/*"):
+            os.remove(file)
+        os.rmdir("files/input")
+    os.makedirs("files/input")
 
     for file in glob.glob("files/raw/*"):
         for i in range(1, n + 1):
@@ -32,7 +36,7 @@ def copy_raw_files_to_input_folder(n):
                     "w",
                     encoding="utf-8",
                 ) as f2:
-                    f2.write(f.read())       
+                    f2.write(f.read())  
 #
 # Escriba la función load_input que recive como parámetro un folder y retorna
 # una lista de tuplas donde el primer elemento de cada tupla es el nombre del
@@ -103,6 +107,7 @@ def mapper(sequence):
 #
 def shuffle_and_sort(sequence):
     """Shuffle and Sort"""
+    return sorted(sequence, key=lambda x: x[0])
 
 
 #
@@ -113,6 +118,10 @@ def shuffle_and_sort(sequence):
 #
 def reducer(sequence):
     """Reducer"""
+    result = []
+    for key, group in groupby(sequence, lambda x: x[0]):
+        result.append((key, sum(value for _, value in group)))
+    return result
 
 
 #
@@ -121,6 +130,13 @@ def reducer(sequence):
 #
 def create_ouptput_directory(output_directory):
     """Create Output Directory"""
+
+    if os.path.exists(output_directory):
+        for file in glob.glob(f"{output_directory}/*"):
+            os.remove(file)
+        os.rmdir(output_directory)
+    os.makedirs(output_directory)
+
 
 
 #
@@ -133,6 +149,9 @@ def create_ouptput_directory(output_directory):
 #
 def save_output(output_directory, sequence):
     """Save Output"""
+    with open(f"{output_directory}/part-00000", "w", encoding="utf-8") as f:
+        for key, value in sequence:
+            f.write(f"{key}\t{value}\n")
 
 
 #
@@ -141,6 +160,8 @@ def save_output(output_directory, sequence):
 #
 def create_marker(output_directory):
     """Create Marker"""
+    with open(f"{output_directory}/_SUCCESS", "w", encoding="utf-8") as f:
+        f.write("")
 
 
 #
@@ -151,11 +172,16 @@ def run_job(input_directory, output_directory):
     sequence = load_input(input_directory)
     sequence = line_preprocessing(sequence)
     sequence = mapper(sequence)
+    sequence = shuffle_and_sort(sequence)
+    sequence = reducer(sequence)
+    create_ouptput_directory(output_directory)
+    save_output(output_directory, sequence)
+    create_marker(output_directory)
     return
 
 if __name__ == "__main__":
 
-    copy_raw_files_to_input_folder(n=1000)
+    copy_raw_files_to_input_folder(n=5000)
 
     start_time = time.time()
 
